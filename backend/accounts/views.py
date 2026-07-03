@@ -3,7 +3,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import RegisterSerializer
+from drf_spectacular.utils import extend_schema
+from .serializers import RegisterSerializer, LogoutSerializers
 
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
@@ -12,6 +13,10 @@ class RegisterView(CreateAPIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        request=LogoutSerializers,
+        responses={205: None}
+    )
     def post(self, request):
         try:
             refresh_token = request.data["refresh"]
