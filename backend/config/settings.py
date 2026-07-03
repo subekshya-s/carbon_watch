@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'areaofintrest',
     'analysis',
     'accounts',
-    'drf_yasg',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
 ]
@@ -150,4 +149,14 @@ from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Carbon Watch API',
+    'DESCRIPTION': 'Satellite-based forest carbon monitoring for Nepal',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
