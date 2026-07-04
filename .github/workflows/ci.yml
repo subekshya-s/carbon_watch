@@ -47,6 +47,7 @@ jobs:
         env:
           DB_PASSWORD: testpassword
           DJANGO_SETTINGS_MODULE: config.settings
+          EE_PROJECT: test-project
         run: |
           cd backend
           pytest accounts/tests.py -v
