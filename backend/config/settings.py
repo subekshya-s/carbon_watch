@@ -90,7 +90,7 @@ DATABASES = {
     }
 }
 
-
+EE_PROJECT = config("EE_PROJECT")
 # Password validation
 
 AUTH_PASSWORD_VALIDATORS = [
