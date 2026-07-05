@@ -281,8 +281,6 @@ Backend Developer | GIS Developer | Remote Sensing Enthusiast
 
 GitHub: https://github.com/subekshya-s
 
-LinkedIn: *(Add your LinkedIn URL here)*
-
 ---
 
 # 🙏 Acknowledgements
