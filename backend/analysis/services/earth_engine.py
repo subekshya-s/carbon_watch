@@ -1,19 +1,41 @@
 import json
 import ee
+
 from django.conf import settings
 
-ee.Initialize(project=settings.EE_PROJECT)
+
+# Initialize Earth Engine
+try:
+    ee.Initialize(project=settings.EE_PROJECT)
+except Exception:
+    ee.Authenticate()
+    ee.Initialize(project=settings.EE_PROJECT)
 
 
 def district_to_ee_geometry(district):
     """
-    Convert a Django/PostGIS geometry into an Earth Engine Geometry.
+    Convert a Django/PostGIS MultiPolygon into
+    an Earth Engine Geometry.
     """
 
-    # Convert GEOS geometry to GeoJSON
     geojson = json.loads(district.geometry.geojson)
 
-    # Create Earth Engine geometry
-    ee_geometry = ee.Geometry(geojson)
+    return ee.Geometry(geojson)
 
-    return ee_geometry
+
+def get_landcover_image(district):
+    """
+    Returns the ESA WorldCover 2021 image
+    clipped to the selected district.
+    """
+
+    geometry = district_to_ee_geometry(district)
+
+    worldcover = (
+        ee.ImageCollection("ESA/WorldCover/v200")
+        .first()
+    )
+
+    clipped = worldcover.clip(geometry)
+
+    return clipped
