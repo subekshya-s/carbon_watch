@@ -37,14 +37,31 @@ CLASS_MAPPING = {
     "100": "moss_lichen",
 }
 
-# Initialize Earth Engine on module load
-try:
-    ee.Initialize(project=settings.EE_PROJECT)
-    logger.info("Earth Engine initialized successfully.")
-except Exception:
-    logger.warning("EE Initialize failed. Attempting authentication.")
-    ee.Authenticate()
-    ee.Initialize(project=settings.EE_PROJECT)
+_initialized = False
+
+
+def initialize_earth_engine():
+    """
+    Initialize Earth Engine once.
+
+    Raises:
+        RuntimeError: If Earth Engine cannot be initialized.
+    """
+    global _initialized
+
+    if _initialized:
+        return
+
+    try:
+        ee.Initialize(project=settings.EE_PROJECT)
+        logger.info("Earth Engine initialized successfully.")
+        _initialized = True
+
+    except Exception as exc:
+        logger.exception("Failed to initialize Earth Engine.")
+        raise RuntimeError(
+            "Earth Engine is not configured correctly."
+        ) from exc
 
 
 def district_to_ee_geometry(district):
@@ -78,6 +95,7 @@ def get_landcover_statistics(district, year):
         ValueError: If the requested year is not supported.
         Exception: If Earth Engine request fails.
     """
+    initialize_earth_engine()
     if year not in WORLDCOVER_DATASETS:
         raise ValueError(
             f"Year {year} is not supported. "
