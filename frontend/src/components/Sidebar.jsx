@@ -1,88 +1,131 @@
-export default function Sidebar({ district, analysis, loading, onAnalyze }) {
+import CarbonCard from "./CarbonCard";
+import {
+  MapPinned,
+  Sparkles,
+  ArrowRight,
+  LoaderCircle,
+} from "lucide-react";
+
+export default function Sidebar({
+  district,
+  analysis,
+  loading,
+  onAnalyze,
+}) {
   return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <h2>Carbon Watch</h2>
-        <p>Select a district to analyze</p>
-      </div>
+    <div className="space-y-6">
 
-      <div className="sidebar-content">
-        {!district && (
-          <div className="empty-state">
-            <p>Click on any district on the map to select it and trigger a carbon analysis.</p>
+      {/* District Card */}
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
+
+        <div className="bg-gradient-to-r from-emerald-700 to-green-500 p-6 text-white">
+
+          <div className="flex items-center gap-3">
+            <MapPinned size={26} />
+            <div>
+              <p className="uppercase tracking-widest text-xs opacity-80">
+                Selected District
+              </p>
+
+              <h2 className="text-3xl font-black mt-1">
+                {district ? district.name : "None Selected"}
+              </h2>
+
+              {district && (
+                <p className="text-emerald-100 mt-1">
+                  {district.province}
+                </p>
+              )}
+            </div>
           </div>
-        )}
 
-        {district && (
-          <>
-            <div className="district-info">
-              <div className="district-name">{district.name}</div>
-              <div className="district-province">{district.province}</div>
+        </div>
+
+        <div className="p-6">
+
+          {!district ? (
+
+            <div className="text-center py-10">
+
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/684/684908.png"
+                alt="Location"
+                className="w-16 mx-auto opacity-40"
+              />
+
+              <p className="mt-5 text-gray-500 leading-7">
+                Click any district on the map to start
+                analyzing forest carbon.
+              </p>
+
             </div>
 
+          ) : (
+
             <button
-              className="btn-analyze"
               onClick={onAnalyze}
               disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 transition-all duration-300 rounded-2xl py-4 text-white font-bold text-lg flex justify-center items-center gap-3 shadow-lg hover:shadow-xl"
             >
-              {loading ? 'Analyzing...' : '⚡ Analyze Carbon'}
+
+              {loading ? (
+                <>
+                  <LoaderCircle className="animate-spin" size={22} />
+                  Running Analysis...
+                </>
+              ) : (
+                <>
+                  Run Carbon Analysis
+                  <ArrowRight size={20} />
+                </>
+              )}
+
             </button>
 
-            {loading && (
-              <div className="loading">
-                <div className="spinner"></div>
-                Fetching satellite data...
-              </div>
-            )}
+          )}
 
-            {analysis && !loading && (
-              <div className="results-section">
-                <div className="results-title">Analysis Results · 2020 → 2021</div>
+        </div>
 
-                <div className="carbon-stock">
-                  <div className="carbon-label">Estimated Carbon Stock</div>
-                  <div className="carbon-value">
-                    {analysis.carbon_estimate.estimated_carbon_stock.toLocaleString()}
-                    <span className="carbon-unit"> tC</span>
-                  </div>
-                  <div className={`carbon-change ${analysis.carbon_estimate.estimated_change < 0 ? 'loss' : 'gain'}`}>
-                    {analysis.carbon_estimate.estimated_change < 0 ? '▼' : '▲'} {Math.abs(analysis.carbon_estimate.estimated_change).toLocaleString()} tC change
-                  </div>
-                </div>
-
-                <div className="landcover-grid">
-                  {[
-                    { label: 'Forest', value: analysis.carbon_estimate.forest_area_pct, color: '#2ECC8A' },
-                    { label: 'Cropland', value: analysis.carbon_estimate.cropland_area_pct, color: '#E8A020' },
-                    { label: 'Built-up', value: analysis.carbon_estimate.built_up_area_pct, color: '#E05252' },
-                    { label: 'Other', value: analysis.carbon_estimate.other_area_pct, color: '#B8B0A4' },
-                  ].map(item => (
-                    <div className="landcover-item" key={item.label}>
-                      <div className="landcover-header">
-                        <span>{item.label}</span>
-                        <span className="landcover-pct">{item.value}%</span>
-                      </div>
-                      <div className="landcover-bar">
-                        <div
-                          className="landcover-fill"
-                          style={{ width: `${item.value}%`, background: item.color }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {analysis.carbon_estimate.ai_summary && (
-                  <div className="ai-summary">
-                    <div className="ai-label">🤖 AI Summary</div>
-                    <div className="ai-text">{analysis.carbon_estimate.ai_summary}</div>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
       </div>
+
+      {/* Carbon Card */}
+      {analysis && <CarbonCard analysis={analysis} />}
+
+      {/* AI Insights */}
+      {analysis?.carbon_estimate?.ai_summary && (
+
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-6">
+
+          <div className="flex items-center gap-3 mb-5">
+
+            <div className="bg-yellow-100 p-3 rounded-xl">
+              <Sparkles className="text-yellow-500" />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold">
+                AI Insights
+              </h2>
+
+              <p className="text-gray-500 text-sm">
+                Automatically generated summary
+              </p>
+            </div>
+
+          </div>
+
+          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+
+            <p className="text-gray-700 leading-8">
+              {analysis.carbon_estimate.ai_summary}
+            </p>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
-  )
+  );
 }
