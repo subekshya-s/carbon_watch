@@ -42,7 +42,7 @@ _initialized = False
 
 def initialize_earth_engine():
     """
-    Initialize Earth Engine once.
+    Initialize Earth Engine once, using a service account.
 
     Raises:
         RuntimeError: If Earth Engine cannot be initialized.
@@ -53,7 +53,11 @@ def initialize_earth_engine():
         return
 
     try:
-        ee.Initialize(project=settings.EE_PROJECT)
+        credentials = ee.ServiceAccountCredentials(
+            settings.EE_SERVICE_ACCOUNT_EMAIL,
+            settings.EE_SERVICE_ACCOUNT_KEY_PATH,
+        )
+        ee.Initialize(credentials, project=settings.EE_PROJECT)
         logger.info("Earth Engine initialized successfully.")
         _initialized = True
 
