@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+
+  # PostgreSQL + PostGIS database
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: carbonwatch_db
+    environment:
+      POSTGRES_DB: carbonwatch_db
+      POSTGRES_USER: carbonwatch_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carbonwatch_user -d carbonwatch_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Django backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: carbonwatch_backend
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD}
+      EE_PROJECT: ${EE_PROJECT}
+      EE_SERVICE_ACCOUNT_EMAIL: ${EE_SERVICE_ACCOUNT_EMAIL}
+      EE_SERVICE_ACCOUNT_KEY_PATH: /app/secrets/ee-service-account.json
+
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      DB_HOST: db
+      DJANGO_SETTINGS_MODULE: config.settings
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+      - ./secrets/ee-service-account.json:/app/secrets/ee-service-account.json:ro
+
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py load_districts &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+
+  # React frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: carbonwatch_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

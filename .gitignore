@@ -1,5 +1,21 @@
+# Python
 venv/
 *.pyc
 __pycache__/
-.env
+
+# Django
 db.sqlite3
+*.log
+
+# Secrets & env
+.env
+.env.*
+secrets/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+
+# OS/editor
+.DS_Store
