@@ -10,19 +10,21 @@ Responsibilities:
 
 import json
 import logging
+import os
+import tempfile
 
 import ee
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# ESA WorldCover dataset versions by year
+_initialized = False
+
 WORLDCOVER_DATASETS = {
     2020: "ESA/WorldCover/v100",
     2021: "ESA/WorldCover/v200",
 }
 
-# ESA WorldCover class codes to readable names
 CLASS_MAPPING = {
     "10": "tree_cover",
     "20": "shrubland",
@@ -37,26 +39,45 @@ CLASS_MAPPING = {
     "100": "moss_lichen",
 }
 
-_initialized = False
 
-
-def initialize_earth_engine():
+def _initialize_ee():
     """
-    Initialize Earth Engine once, using a service account.
+    Initialize Earth Engine once using a service account.
 
-    Raises:
-        RuntimeError: If Earth Engine cannot be initialized.
+    Supports two methods:
+    1. EE_SERVICE_ACCOUNT_KEY_JSON env var (production/Render)
+       - Full JSON key content stored as environment variable
+    2. EE_SERVICE_ACCOUNT_KEY_PATH (local/Docker)
+       - Path to local JSON key file
     """
     global _initialized
-
     if _initialized:
         return
 
     try:
-        credentials = ee.ServiceAccountCredentials(
-            settings.EE_SERVICE_ACCOUNT_EMAIL,
-            settings.EE_SERVICE_ACCOUNT_KEY_PATH,
-        )
+        email = settings.EE_SERVICE_ACCOUNT_EMAIL
+
+        # Method 1: JSON content from environment variable (Render)
+        key_json = os.environ.get("EE_SERVICE_ACCOUNT_KEY_JSON")
+
+        if key_json:
+            # Write JSON to a temp file for the EE SDK
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                suffix=".json",
+                delete=False
+            ) as tmp:
+                tmp.write(key_json)
+                tmp_path = tmp.name
+
+            credentials = ee.ServiceAccountCredentials(email, tmp_path)
+            os.unlink(tmp_path)  # delete temp file immediately after use
+
+        # Method 2: Local file path (Docker/development)
+        else:
+            key_path = settings.EE_SERVICE_ACCOUNT_KEY_PATH
+            credentials = ee.ServiceAccountCredentials(email, key_path)
+
         ee.Initialize(credentials, project=settings.EE_PROJECT)
         logger.info("Earth Engine initialized successfully.")
         _initialized = True
@@ -72,21 +93,29 @@ def district_to_ee_geometry(district):
     """
     Convert a Django/PostGIS MultiPolygon district into
     an Earth Engine Geometry object.
-
-    Args:
-        district: District model instance with PostGIS geometry field.
-
-    Returns:
-        ee.Geometry object.
     """
     geojson = json.loads(district.geometry.geojson)
     return ee.Geometry(geojson)
 
 
+def _get_stats_for_image(image, geometry):
+    """Run frequencyHistogram on a clipped image."""
+    stats = image.reduceRegion(
+        reducer=ee.Reducer.frequencyHistogram(),
+        geometry=geometry,
+        scale=10,
+        maxPixels=1e10,
+    )
+    histogram = stats.get("Map").getInfo()
+    return {
+        CLASS_MAPPING.get(code, f"class_{code}"): area
+        for code, area in histogram.items()
+    }
+
+
 def get_landcover_statistics(district, year):
     """
-    Retrieve land cover pixel counts for a district
-    for a given year using ESA WorldCover.
+    Retrieve land cover pixel counts for a district for a given year.
 
     Args:
         district: District model instance.
@@ -94,16 +123,12 @@ def get_landcover_statistics(district, year):
 
     Returns:
         dict mapping land cover class names to pixel counts.
-
-    Raises:
-        ValueError: If the requested year is not supported.
-        Exception: If Earth Engine request fails.
     """
-    initialize_earth_engine()
+    _initialize_ee()
+
     if year not in WORLDCOVER_DATASETS:
         raise ValueError(
-            f"Year {year} is not supported. "
-            f"Supported years: {list(WORLDCOVER_DATASETS.keys())}"
+            f"Year {year} not supported. Supported: {list(WORLDCOVER_DATASETS.keys())}"
         )
 
     geometry = district_to_ee_geometry(district)
@@ -115,19 +140,7 @@ def get_landcover_statistics(district, year):
         .clip(geometry)
     )
 
-    stats = image.reduceRegion(
-        reducer=ee.Reducer.frequencyHistogram(),
-        geometry=geometry,
-        scale=10,
-        maxPixels=1e10,
-    )
-
-    histogram = stats.get("Map").getInfo()
-
-    landcover = {
-        CLASS_MAPPING.get(code, f"class_{code}"): area
-        for code, area in histogram.items()
-    }
+    landcover = _get_stats_for_image(image, geometry)
 
     logger.info(
         "Land cover statistics retrieved for district=%s year=%d classes=%d",

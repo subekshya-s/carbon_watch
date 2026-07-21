@@ -11,11 +11,10 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # SECURITY
-SECRET_KEY = 'django-insecure-!-8nn58+!6@m23%va^(+!#zcwz6nx2zhyrb8!@ge=_4(9r^1rr'
+SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 
 
@@ -79,17 +78,29 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
+# Database
+import dj_database_url
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'carbonwatch_db',
-        'USER': 'carbonwatch_user',
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': '5432',
+DATABASE_URL = config('DATABASE_URL', default=None)
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            engine='django.contrib.gis.db.backends.postgis',
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': 'carbonwatch_db',
+            'USER': 'carbonwatch_user',
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': '5432',
+        }
+    }
 
 EE_PROJECT = config("EE_PROJECT", default="")
 # Password validation
@@ -157,16 +168,20 @@ SPECTACULAR_SETTINGS = {
 # Default primary key field type
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost",
-    "http://localhost:80",
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://localhost:5173,http://localhost,http://localhost:80',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 
 # Docker/Production settings
-ALLOWED_HOSTS = ['*']
-
-EE_SERVICE_ACCOUNT_EMAIL = os.environ.get("EE_SERVICE_ACCOUNT_EMAIL")
-EE_SERVICE_ACCOUNT_KEY_PATH = os.environ.get("EE_SERVICE_ACCOUNT_KEY_PATH")
+# Docker/Production settings
+ALLOWED_HOSTS = config(
+    'DJANGO_ALLOWED_HOSTS',
+    default='localhost,127.0.0.1',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
+EE_SERVICE_ACCOUNT_EMAIL = config("EE_SERVICE_ACCOUNT_EMAIL", default="")
+EE_SERVICE_ACCOUNT_KEY_PATH = config("EE_SERVICE_ACCOUNT_KEY_PATH", default="")
+EE_SERVICE_ACCOUNT_KEY_JSON = config("EE_SERVICE_ACCOUNT_KEY_JSON", default="")
