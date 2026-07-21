@@ -1,0 +1,48 @@
+services:
+  # Django Backend
+  - type: web
+    name: carbonwatch-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: |
+      apt-get update && apt-get install -y gdal-bin libgdal-dev libpq-dev gcc
+      pip install -r requirements.txt
+    startCommand: |
+      python manage.py migrate
+      python manage.py load_districts
+      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    envVars:
+      - key: DB_PASSWORD
+        sync: false
+      - key: EE_PROJECT
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: carbonwatch-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.12.0
+
+  # React Frontend
+  - type: web
+    name: carbonwatch-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://carbonwatch-backend.onrender.com/api/$1
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: carbonwatch-db
+    databaseName: carbonwatch_db
+    user: carbonwatch_user
