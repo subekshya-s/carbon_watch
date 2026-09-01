@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const API = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: 'https://carbon-watch-jgky.onrender.com/api',
 })
 
 export const getDistricts = () => API.get('/districts/')
