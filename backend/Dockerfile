@@ -21,5 +21,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Run gunicorn
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1"]
+# Run migrations, load districts, then start gunicorn
+CMD ["sh", "-c", "python manage.py migrate && python manage.py load_districts && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1"]
